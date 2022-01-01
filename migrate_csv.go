@@ -2,14 +2,17 @@ package main
 
 import (
 	"encoding/csv"
+	"errors"
 	"io"
 	"log"
 	"os"
+	"strings"
 )
 
 var (
-	fileName    string = "logins.csv"
-	outFileName string = "logins_processed.csv"
+	fileName        string = "logins.csv"
+	outFileName     string = "logins_processed.csv"
+	errInvalidEntry error  = errors.New("invalid entry")
 )
 
 func main() {
@@ -44,9 +47,29 @@ func main() {
 			break
 		}
 		if err != nil {
-			log.Fatal("Could not process file entry", err)
+			log.Println("Could not process input", err)
+			continue
 		}
 		//fmt.Println(line)
-		err = writer.Write([]string{line[0], line[1], line[2]})
+		if processedRecord, err := processLine(line); err == nil {
+			err = writer.Write(processedRecord)
+			if err != nil {
+				log.Println("Could not write entry", err)
+				continue
+			}
+		}
 	}
+}
+
+func processLine(line []string) ([]string, error) {
+	if len(line) < 3 {
+		return nil, errInvalidEntry
+	}
+	if line[0] == "" || !strings.HasPrefix(line[0], "http") {
+		return nil, errInvalidEntry
+	}
+	if line[1] == "" || line[2] == "" {
+		return nil, errInvalidEntry
+	}
+	return []string{line[0], line[1], line[2]}, nil
 }
